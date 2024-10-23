@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "mrc-to-zarr"
+version = "0.1.0"
+description = ""
+authors = ["Yurii Zubov <zubov452@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+numcodecs = "^0.13.1"
+mrcfile = "^1.5.3"
+numpy = "^2.1.2"
+click = "^8.1.7"
+zarr = "^2.18.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
