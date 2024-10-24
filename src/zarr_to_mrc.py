@@ -138,9 +138,9 @@ def store_mrc_to_zarr(src_path: str,
     "--units",
     "-u",
     nargs=3,
-    default=("nm", "nm", "nm"),
+    default=("nanometer", "nanometer", "nanometer"),
     type=str,
-    help="Metadata unit names. Order matters. \n Example: -t nanometer nanometer nanometer",
+    help="Metadata unit names. Order matters. \n Example: -u nanometer nanometer nanometer",
 )
 #@click.option('--workers','-w',default=100,type=click.INT,help = "Number of dask workers")
 #@click.option('--cluster', '-c', default='' ,type=click.STRING, help="Which instance of dask client to use. Local client - 'local', cluster 'lsf'")
