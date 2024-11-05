@@ -7,11 +7,14 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-numcodecs = "^0.13.1"
+numcodecs = "^0.12.1"
 mrcfile = "^1.5.3"
-numpy = "^2.1.2"
+numpy = "^1.26.2"
 click = "^8.1.7"
-zarr = "^2.18.3"
+zarr = "^2.16.1"
+bokeh = "^3.3.2"
+dask = {extras = ["distributed"], version = "^2023.12.0"}
+dask-jobqueue = "0.8.2"
 
 
 [build-system]

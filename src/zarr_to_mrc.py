@@ -132,11 +132,11 @@ def initialize_dask_client(scheduler : str):
 
 #     z_root.attrs['multiscales'] = z_attrs['multiscales']
      
-def save_chunk(mrc_data : numpy.ndarray,
+def save_chunk(mrc_file,
                   z_arr: zarr.core.Array,
-                  slice : Tuple):
-    if not (mrc_data == 0).all():
-        z_arr[slice] = mrc_data[slice]
+                  chunk_slice : Tuple):
+    if not (mrc_file.data[chunk_slice] == 0).all():
+        z_arr[chunk_slice] = mrc_file.data[chunk_slice]
     
 
 def mrc_to_zarr(src_path: str,
@@ -157,16 +157,15 @@ def mrc_to_zarr(src_path: str,
     comp = Zstd(level=6)
     
     mrc_file = mrcfile.mmap(src_path, mode='r')
-    mrc_data = mrc_file.data
     
     zs = zarr.NestedDirectoryStore(dest_path)
     ds_name = 's0'
     z_root = zarr.open(zs, mode='a')
     z_arr = z_root.require_dataset(
                         name=ds_name,
-                        shape=mrc_data.shape,
-                        chunks =(128,)*mrc_data.ndim,
-                        dtype=mrc_data.dtype,
+                        shape=mrc_file.data.shape,
+                        chunks =(128,)*mrc_file.data.ndim,
+                        dtype=mrc_file.data.dtype,
                         compressor=comp)
     
     client.cluster.scale(num_workers)
@@ -177,7 +176,7 @@ def mrc_to_zarr(src_path: str,
     for idx, part in enumerate(out_slices_partitioned):
         print(f'{idx + 1} / {len(out_slices_partitioned)}')
         start = time.time()
-        fut = client.map(lambda v: save_chunk(mrc_data, z_arr, v), part)
+        fut = client.map(lambda v: save_chunk(mrc_file, z_arr, v), part)
         print(f'Submitted {len(part)} tasks to the scheduler in {time.time()- start}s')
         # wait for all the futures to complete
         result = wait(fut)
