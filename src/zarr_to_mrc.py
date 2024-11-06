@@ -11,66 +11,6 @@ from dask.distributed import Client, wait, LocalCluster
 from toolz import partition_all
 import time
 
-
-
-# def slice_along_z_dim(arr_shape : Tuple, step : int) -> list:
-#     """Get a list of slices of the mrc dataset that are being used to convert mrc dataset to zarr dataset. Slicing is necessary, since oftentimes whole dataset is larger than the RAM size.
-
-#     Args:
-#         arr_shape (Tuple): shape of the mrc array
-#         step (int): slicing occurs along z-direction, it is reasonable to choose minimal slicing step equal to the size of the zarr chunk in z-direction
-
-#     Returns:
-#         list: list of slices along z-dimension of the mrc array that are being copied one-by-one
-#     """
-#     z_len = arr_shape[0]
-#     slices = []
-#     for sl in range(0, z_len, step):
-#         if sl + step < z_len: 
-#             slices.append(slice(sl, sl+step))
-#         else:
-#             slices.append(slice(sl, z_len))
-#     return slices
-
-
-# def store_mrc_to_zarr(src_path: str,
-#                       dest_path: str,
-#                       scale : list,
-#                       translation: list,
-#                       axes : list,
-#                       units: list):
-#     """Use mrcfile memmap to access small parts of the mrc file and write them into zarr chunks.
-
-#     Args:
-#         src_path (str): path to the input mrc dataset
-#         dest_path (str): path to the zarr group where the output dataset is stored. 
-#     """
-#     # default compression spec 
-#     comp = Zstd(level=6)
-    
-#     large_mrc = mrcfile.mmap(src_path, mode='r')
-    
-#     zs = zarr.NestedDirectoryStore(dest_path)
-#     ds_name = 's0'
-#     z_root = zarr.open(zs, mode='a')
-#     z_arr = z_root.require_dataset(
-#                         name=ds_name,
-#                         shape=large_mrc.data.shape,
-#                         chunks =(128,)*large_mrc.data.ndim,
-#                         dtype=large_mrc.data.dtype,
-#                         compressor=comp)
-    
-#     slices = slice_along_z_dim(large_mrc.data.shape, z_arr.chunks[0])
-#     for sl in slices:
-#         z_arr[sl] = large_mrc.data[sl]
-#         print(large_mrc.data.shape[0], sl)
-        
-#     #generate data and save to multiscale 
-#     z_attrs = generate_multiscales_metadata(ds_name, scale, translation, units, axes)
-
-#     z_root.attrs['multiscales'] = z_attrs['multiscales']
-
-
 def generate_multiscales_metadata(
     ds_name: str,
     voxel_size: list,
@@ -111,9 +51,17 @@ def generate_multiscales_metadata(
 
     return z_attrs
 
-def initialize_dask_client(scheduler : str):
+def initialize_dask_client(cluster_type : str)->Client:
+    """Initialize dask client.
+
+    Args:
+        cluster_type (str): type of the cluster, either local or lsf
+
+    Returns:
+        (Client): instance of a dask client
+    """
     num_cores = 1
-    if scheduler=='lsf':
+    if cluster_type=='lsf':
         cluster = LSFCluster(
             cores=num_cores,
             processes=num_cores,
@@ -123,7 +71,7 @@ def initialize_dask_client(scheduler : str):
             walltime="48:00",
             local_directory = "/scratch/$USER/"
             )
-    elif scheduler=='local': 
+    elif cluster_type=='local': 
         cluster = LocalCluster()
         
     client = Client(cluster)
@@ -135,6 +83,13 @@ def initialize_dask_client(scheduler : str):
 def save_chunk(src_path : str,
                   z_arr: zarr.core.Array,
                   chunk_slice : Tuple[slice, ...]):
+    """Copies data from a particular part of the input mrc array into a specific chunk of the output zarr array.
+
+    Args:
+        src_path (str): path to the input mrc file 
+        z_arr (zarr.core.Array): output zarr array object
+        chunk_slice (Tuple[slice, ...]): slice of the mrc array to copy. 
+    """
     mrc_file = mrcfile.mmap(src_path, mode='r')
 
     #if not (mrc_file.data[chunk_slice] == 0).all():
@@ -151,8 +106,13 @@ def mrc_to_zarr(src_path: str,
     """Use mrcfile memmap to access small parts of the mrc file and write them into zarr chunks.
 
     Args:
-        src_path (str): path to the input mrc dataset
-        dest_path (str): path to the zarr group where the output dataset is stored. 
+        src_path (str): path to the input mrc dataset.
+        dest_path (str): path to the zarr group where the output dataset is stored.
+        client (Client): instance of a dask client
+        scale (list): size of the voxel in units
+        translation (list): shift in coordinate space
+        units (str): physical units
+        axes (list): axes order 
     """
     # default compression spec 
     
